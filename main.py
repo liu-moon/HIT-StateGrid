@@ -4,18 +4,35 @@ from numpy.fft import fft
 import matplotlib.pyplot as plt
 
 class FiberOpticDataProcessor:
+
     def __init__(self, file_path):
+        """
+        类成员初始化函数
+        :param file_path: 要处理的文件路径
+        """
+        # 初始化
+        # file_path: 要处理的文件路径
         self.file_path = file_path
+        # 加载的数据
         self.data = None
+        # 数据的行数和列数
         self.num_rows = 0
         self.num_cols = 0
-        self.fs = 10240 / 600  # 采样率
+        # 采样率
+        self.fs = 10240 / 600
+        # 频率轴
         self.freq_axis = None
+        # FFT变换的结果
         self.fft_result = None
+        # FFT变换的结果的dB形式
         self.fft_result_db = None
+        # 处理后的数据 暂时未用到
         self.processed_data = pd.DataFrame(columns=['Length', 'Max_Frequency', 'Max_Gain'])
 
     def load_data(self):
+        """
+        加载数据，其中计算了频率轴以及重置了fft_result、fft_result_db的size
+        """
         # 从CSV文件加载数据
         self.data = pd.read_csv(self.file_path, header=None)
         # 获取数据的行数和列数
@@ -42,6 +59,10 @@ class FiberOpticDataProcessor:
             print("数据加载成功")
 
     def fft_data(self):
+        """
+        对数据进行FFT变换
+        :return: fft_result, fft_result_db
+        """
         for col in range(self.num_cols):
             # 对每一列的数据进行FFT变换
             signal = self.data.iloc[:, col].values
@@ -65,10 +86,19 @@ class FiberOpticDataProcessor:
             self.fft_result_db[:, col] = magnitude_db
 
     def save_data(self,output_file_path):
+        """
+        将fft_result_db保存到CSV文件
+        :param output_file_path: 保存的文件路径
+        """
         # 将fft_result_db保存到CSV文件
         np.savetxt(output_file_path, self.fft_result_db, delimiter=',')
 
     def plot_data(self,start_index,end_index):
+        """
+        画出FFT的结果
+        :param start_index: 光缆的开始索引
+        :param end_index: 光缆的结束索引
+        """
         for col in range(start_index,end_index+1):
             # 画出谱线
             # plt.figure(figsize=(10, 6))
@@ -82,11 +112,18 @@ class FiberOpticDataProcessor:
 
 if __name__ == "__main__":
 
+    # 读取的文件路径
     file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\2023_11_05-15_35_48--271332.csv"
+    # 保存的文件路径
     output_file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\my_output_file.csv"
 
+    # 创建一个FiberOpticDataProcessor对象
     processor = FiberOpticDataProcessor(file_path)
+    # 加载数据
     processor.load_data()
+    # 对数据进行FFT变换
     processor.fft_data()
+    # 保存数据
     processor.save_data(output_file_path)
+    # 画图
     processor.plot_data(100,110)
