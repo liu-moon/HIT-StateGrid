@@ -7,12 +7,12 @@ class FiberOpticDataProcessor:
     def __init__(self, file_path):
         self.file_path = file_path
         self.data = None
-        self.fft_result = np.array([]).reshape(0, 0)
-        self.fft_result_db = np.array([]).reshape(0, 0)
         self.num_rows = 0
         self.num_cols = 0
         self.fs = 10240 / 600  # 采样率
         self.freq_axis = None
+        self.fft_result = None
+        self.fft_result_db = None
         self.processed_data = pd.DataFrame(columns=['Length', 'Max_Frequency', 'Max_Gain'])
 
     def load_data(self):
@@ -30,7 +30,11 @@ class FiberOpticDataProcessor:
         self.freq_axis = freq_axis[1:len(signal) // 2]  # 这里的“1”是去掉第一个点
 
         # 打印频率轴freq_axis
-        print(self.freq_axis.shape[0])
+        # print(self.freq_axis.shape[0])
+        self.fft_result = np.zeros((self.freq_axis.shape[0], self.num_cols))
+        self.fft_result_db = np.zeros((self.freq_axis.shape[0],self.num_cols))
+        # print(self.fft_result.shape)
+        # print(self.fft_result_db.shape)
 
         if self.data is None:
             print("数据加载失败")
@@ -45,30 +49,26 @@ class FiberOpticDataProcessor:
             signal = signal - np.mean(signal)
             # FFT变换
             fft_result = np.fft.fft(signal)
-            # # 获取频率轴
-            # freq_axis = np.fft.fftfreq(len(signal), 1 / self.fs)
 
             # 将双边谱转换成单边谱
             half_len = len(signal) // 2
-            # freq_axis = freq_axis[1:half_len]   # 这里的“1”是去掉第一个点
-            fft_result = np.abs(fft_result[1:half_len]) / self.num_rows * 2
 
-            # 将新计算的值追加到矩阵中
-            # self.fft_result = np.vstack([self.fft_result, fft_result])
-            self.fft_result = np.append(self.fft_result, fft_result)
+            fft_result = np.abs(fft_result[1:half_len]) / self.num_rows * 2
+            # print(fft_result.shape)
 
             # 将坐标转化为dB形式
             magnitude = np.abs(fft_result)
             magnitude_db = 10 * np.log10(magnitude)
 
-            # 将新计算的值追加到矩阵中
-            # self.fft_result_db = np.vstack([self.fft_result_db, magnitude_db])
-            self.fft_result_db = np.append(self.fft_result_db, magnitude_db)
+            # 将新计算的值更新到矩阵中
+            self.fft_result[:, col] = fft_result
+            self.fft_result_db[:, col] = magnitude_db
 
-        print(self.fft_result)
-        print(self.fft_result_db)
-        print(self.fft_result.shape)
-        print(self.fft_result_db.shape)
+
+        # print(self.fft_result)
+        # print(self.fft_result_db)
+        # print(self.fft_result.shape)
+        # print(self.fft_result_db.shape)
 
             # 画出谱线
             # plt.figure(figsize=(10, 6))
@@ -78,6 +78,12 @@ class FiberOpticDataProcessor:
             # plt.ylabel('Magnitude (dB)')
             # plt.grid(True)
             # plt.show()
+    def save_data(self,output_file_path):
+        # 将fft_result_db保存到CSV文件
+        # self.fft_result_db.to_csv(output_file_path, index=False)
+        # 保存矩阵到CSV文件
+        np.savetxt(output_file_path, self.fft_result_db, delimiter=',')
+
 
     def process_data(self, output_file_path):
         if self.data is None:
@@ -267,12 +273,13 @@ class FiberOpticDataProcessor:
 
 if __name__ == "__main__":
     # 示例用法
-    file_path = "2023_11_05-15_35_48--271332.csv"
-    output_file_path = "your_output_file.csv"
+    file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\2023_11_05-15_35_48--271332.csv"
+    output_file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\my_output_file.csv"
 
     processor = FiberOpticDataProcessor(file_path)
     processor.load_data()
-    # processor.fft_data()
+    processor.fft_data()
+    processor.save_data(output_file_path)
     # processor.plot_fft()
     # processor.process_data(output_file_path)
     # processor.test_fft()
