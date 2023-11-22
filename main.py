@@ -184,6 +184,14 @@ class FiberOpticDataProcessor:
             processor.save_data(output_file_path)
 
     def append_tofile(self,file_path, new_data, delimiter=',', chunk_size=10000):
+        """
+        将新数据追加到文件中
+        :param file_path: 文件路径
+        :param new_data: 追加的数据
+        :param delimiter: 分隔符
+        :param chunk_size: 一次处理的大小
+        :return:
+        """
         # 1. 打开文件，如果不存在则创建
         with open(file_path, 'a' if os.path.exists(file_path) else 'w') as file:
             # 2. 将新数据分块写入文件
