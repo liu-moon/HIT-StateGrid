@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from numpy.fft import fft
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 class FiberOpticDataProcessor:
 
@@ -63,7 +64,7 @@ class FiberOpticDataProcessor:
         对数据进行FFT变换
         :return: fft_result, fft_result_db
         """
-        for col in range(self.num_cols):
+        for col in tqdm(range(self.num_cols),desc="FFT",unit="cols"):
             # 对每一列的数据进行FFT变换
             signal = self.data.iloc[:, col].values
             # 去掉均值
@@ -90,8 +91,16 @@ class FiberOpticDataProcessor:
         将fft_result_db保存到CSV文件
         :param output_file_path: 保存的文件路径
         """
-        # 将fft_result_db保存到CSV文件
-        np.savetxt(output_file_path, self.fft_result_db, delimiter=',')
+        # print("saving to file")
+        # # 将fft_result_db保存到CSV文件
+        # np.savetxt(output_file_path, self.fft_result_db, delimiter=',')
+        # print("saved")
+
+        # 逐行保存数据
+        for i in tqdm(range(self.num_rows), desc="Saving data",unit="cols"):
+            np.savetxt(output_file_path, self.fft_result_db[i:i + 1, :], delimiter=',')
+
+
 
     def plot_data(self,start_index,end_index):
         """
@@ -102,7 +111,10 @@ class FiberOpticDataProcessor:
         for col in range(start_index,end_index+1):
             # 画出谱线
             # plt.figure(figsize=(10, 6))
-            plt.plot(self.freq_axis, self.fft_result_db[:, col])
+            # db形式
+            # plt.plot(self.freq_axis, self.fft_result_db[:, col])
+            # 非db形式
+            plt.plot(self.freq_axis, self.fft_result[:, col])
             plt.title(f'Single-Sided Amplitude Spectrum x = {col}')
             plt.xlabel('Frequency (Hz)')
             plt.ylabel('Magnitude (dB)')
