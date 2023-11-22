@@ -25,6 +25,8 @@ class FiberOpticDataProcessor:
         self.fs = 10240 / 271.332
         # 频率轴
         self.freq_axis = None
+        # 频率轴的公差
+        self.freq_axis_step = None
         # FFT变换的结果
         self.fft_result = None
         # FFT变换的结果的dB形式
@@ -46,6 +48,15 @@ class FiberOpticDataProcessor:
         print(f'Number of columns: {self.num_cols}')
         # 取data的第一列
         signal = self.data.iloc[:, 0].values
+
+        # 计算频率轴的公差
+        # 打印num_cols，并提示
+        # print(f'Number of columns: {self.num_cols}')
+        # 打印num_rows，并提示
+        # print(f'Number of rows: {self.num_rows}')
+
+        self.freq_axis_step = 1 / ((self.num_rows) * (1/ self.fs))
+        print(f'freq_axis_step: {self.freq_axis_step}')
 
         # 获取频率轴
         freq_axis = np.fft.fftfreq(len(signal), 1 / self.fs).reshape(-1, 1)
@@ -199,7 +210,15 @@ class FiberOpticDataProcessor:
                 chunk = new_data[i:i + chunk_size]
                 np.savetxt(file, chunk, delimiter=delimiter)
 
-
+    def get_max_frequency_range_intensity(self, start_freq, end_freq):
+        """
+        获取特定频率范围内的最大频率值以及其对应的强度
+        :param start_freq: 起始频率
+        :param end_freq: 结束频率
+        :return: max_frequency, max_intensity
+        """
+        # 获取起始频率和结束频率的索引
+        # start_index =
 
 if __name__ == "__main__":
 
@@ -208,6 +227,12 @@ if __name__ == "__main__":
     # 保存的文件路径
     output_file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\my_output_file1.csv"
 
+    # 10240 / 271.332
+    # 频率轴的计算方法
+    # print(1 / ((10240)*(271.332 / 10240)))
+    for i in range(10):
+        print(i / ((10240)*(271.332 / 10240)))
+
     # # 创建一个FiberOpticDataProcessor对象
     processor = FiberOpticDataProcessor(file_path)
     # # 加载数据
@@ -215,9 +240,16 @@ if __name__ == "__main__":
     # # 对数据进行FFT变换
     processor.fft_data()
     # # 保存数据
-    processor.save_data(output_file_path)
+    # processor.save_data(output_file_path)
     # # 画图
-    processor.plot_data(100,110)
+    # processor.plot_data(100,110)
+
+    start_freq = 0.0184276089808795
+    end_freq = 0.0626538705349903
+    max_frequency, max_intensity = processor.get_max_frequency_range_intensity(start_freq, end_freq)
+
+    print(f"max_frequency: {max_frequency}")
+    print(f"max_intensity: {max_intensity}")
 
     # 测试get_all_files_in_directory函数
     # directory_path = "D:\\永安变电站\\20231103铁岭永安变.part01\\20231103铁岭永安变\\永安变测试数据_20231112\\振动设备\\anpu2x10"
