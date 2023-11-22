@@ -3,6 +3,7 @@ import pandas as pd
 from numpy.fft import fft
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import os
 
 class FiberOpticDataProcessor:
 
@@ -27,6 +28,8 @@ class FiberOpticDataProcessor:
         self.fft_result = None
         # FFT变换的结果的dB形式
         self.fft_result_db = None
+        # 文件夹中所有文件的名称list
+        self.file_names = []
         # 处理后的数据 暂时未用到
         self.processed_data = pd.DataFrame(columns=['Length', 'Max_Frequency', 'Max_Gain'])
 
@@ -121,6 +124,24 @@ class FiberOpticDataProcessor:
             plt.grid(True)
             plt.show()
 
+    def get_all_files_in_directory(self,directory):
+        """
+        获取目录下的所有文件的名称
+        """
+        # 使用 os.listdir 获取目录下的所有文件和子目录
+        all_files = os.listdir(directory)
+
+        # 使用列表推导式过滤出所有文件
+        files = [file for file in all_files if os.path.isfile(os.path.join(directory, file))]
+
+        # 保存到file_names中
+        self.file_names = files
+
+        # 打印文件名
+        for file in files:
+            print(file)
+
+
 
 if __name__ == "__main__":
 
@@ -129,13 +150,17 @@ if __name__ == "__main__":
     # 保存的文件路径
     output_file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\my_output_file.csv"
 
-    # 创建一个FiberOpticDataProcessor对象
+    # # 创建一个FiberOpticDataProcessor对象
     processor = FiberOpticDataProcessor(file_path)
-    # 加载数据
-    processor.load_data()
-    # 对数据进行FFT变换
-    processor.fft_data()
-    # 保存数据
-    processor.save_data(output_file_path)
-    # 画图
-    processor.plot_data(100,110)
+    # # 加载数据
+    # processor.load_data()
+    # # 对数据进行FFT变换
+    # processor.fft_data()
+    # # 保存数据
+    # processor.save_data(output_file_path)
+    # # 画图
+    # processor.plot_data(100,110)
+
+    directory_path = "D:\\永安变电站\\20231103铁岭永安变.part01\\20231103铁岭永安变\\永安变测试数据_20231112\\振动设备\\anpu2x10"
+    processor.get_all_files_in_directory(directory_path)
+
