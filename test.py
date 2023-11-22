@@ -1,55 +1,39 @@
-import matplotlib.pyplot as plt
-import numpy as np
+import time
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
+class MyHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        if event.is_directory:
+            print(f"Directory created: {event.src_path}")
+        else:
+            print(f"File created: {event.src_path}")
+            # 延时两秒
+            print("延时开始")
+            time.sleep(2)
 
+            print("延时结束")
 
-# sampling rate
-sr = 2000
-# sampling interval
-ts = 1.0/sr
-t = np.arange(0,1,ts)
+    def on_deleted(self, event):
+        if event.is_directory:
+            print(f"Directory deleted: {event.src_path}")
+        else:
+            print(f"File deleted: {event.src_path}")
 
-freq = 1.
-x = 3*np.sin(2*np.pi*freq*t)
+    # You can add more event handlers, like on_modified, on_moved, etc.
 
-freq = 4
-x += np.sin(2*np.pi*freq*t)
+if __name__ == "__main__":
+    folder_to_watch = "C:\\Users\\liu-i\\Desktop\\FFT\\data"
 
-freq = 7
-x += 0.5* np.sin(2*np.pi*freq*t)
+    event_handler = MyHandler()
+    observer = Observer()
+    observer.schedule(event_handler, folder_to_watch, recursive=True)
+    observer.start()
 
-plt.figure(figsize = (8, 6))
-plt.plot(t, x, 'r')
-plt.ylabel('Amplitude')
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
 
-plt.show()
-
-# fft
-from numpy.fft import fft, ifft
-
-X = fft(x)
-N = len(X)
-n = np.arange(N)
-T = N/sr
-freq = n/T
-
-# 打印freq的size
-print(f'Number of freq: {freq.size}')
-# 打印X的size
-print(f'Number of X: {X.size}')
-
-plt.figure(figsize = (12, 6))
-plt.subplot(121)
-
-plt.stem(freq, np.abs(X), 'b', \
-         markerfmt=" ", basefmt="-b")
-plt.xlabel('Freq (Hz)')
-plt.ylabel('FFT Amplitude |X(freq)|')
-plt.xlim(0, 10)
-
-plt.subplot(122)
-plt.plot(t, ifft(X), 'r')
-plt.xlabel('Time (s)')
-plt.ylabel('Amplitude')
-plt.tight_layout()
-plt.show()
+    observer.join()

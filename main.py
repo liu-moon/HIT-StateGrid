@@ -21,7 +21,8 @@ class FiberOpticDataProcessor:
         self.num_rows = 0
         self.num_cols = 0
         # 采样率
-        self.fs = 10240 / 600
+        # self.fs = 10240 / 600
+        self.fs = 10240 / 271.332
         # 频率轴
         self.freq_axis = None
         # FFT变换的结果
@@ -47,8 +48,16 @@ class FiberOpticDataProcessor:
         signal = self.data.iloc[:, 0].values
 
         # 获取频率轴
-        freq_axis = np.fft.fftfreq(len(signal), 1 / self.fs)
-        self.freq_axis = freq_axis[1:len(signal) // 2]  # 这里的“1”是去掉第一个点
+        freq_axis = np.fft.fftfreq(len(signal), 1 / self.fs).reshape(-1, 1)
+
+        # freq_axis 转置
+        # freq_axis = freq_axis.reshape(-1, 1)
+        # self.freq_axis = np.transpose(freq_axis[0:len(signal) // 2])
+        self.freq_axis = freq_axis[0:len(signal) // 2]
+        # print(self.freq_axis)
+        # self.freq_axis = np.transpose(self.freq_axis)
+        # print(self.freq_axis)
+        # self.freq_axis = freq_axis[1:len(signal) // 2]  # 这里的“1”是去掉第一个点
 
         # 打印频率轴freq_axis
         # print(self.freq_axis.shape[0])
@@ -78,12 +87,13 @@ class FiberOpticDataProcessor:
             # 将双边谱转换成单边谱
             half_len = len(signal) // 2
 
-            fft_result = np.abs(fft_result[1:half_len]) / self.num_rows * 2
+            fft_result = np.abs(fft_result[0:half_len]) / self.num_rows * 2
             # print(fft_result.shape)
 
             # 将坐标转化为dB形式
             magnitude = np.abs(fft_result)
-            magnitude_db = 10 * np.log10(magnitude)
+            with np.errstate(divide='ignore'):
+                magnitude_db = 10 * np.log10(magnitude)
 
             # 将新计算的值更新到矩阵中
             self.fft_result[:, col] = fft_result
@@ -94,14 +104,12 @@ class FiberOpticDataProcessor:
         将fft_result_db保存到CSV文件
         :param output_file_path: 保存的文件路径
         """
-        # print("saving to file")
-        # # 将fft_result_db保存到CSV文件
-        # np.savetxt(output_file_path, self.fft_result_db, delimiter=',')
-        # print("saved")
-
-        # 逐行保存数据
-        for i in tqdm(range(self.num_rows), desc="Saving data",unit="cols"):
-            np.savetxt(output_file_path, self.fft_result_db[i:i + 1, :], delimiter=',')
+        print("saving to file")
+        # 将fft_result_db保存到CSV文件
+        np.savetxt(output_file_path, np.transpose(self.freq_axis), delimiter=',')
+        # self.append_tofile(output_file_path, self.freq_axis, delimiter=',', chunk_size=10000)
+        self.append_tofile(output_file_path, self.fft_result_db, delimiter=',', chunk_size=10000)
+        print("saved")
 
 
 
@@ -141,6 +149,48 @@ class FiberOpticDataProcessor:
         for file in files:
             print(file)
 
+    def process_folder(self,folder_path,output_folder):
+        """
+        处理文件夹中的所有文件
+        :param folder_path: 文件夹路径
+        :param output_folder: 输出文件夹路径
+        """
+        # 获取文件夹中的所有文件
+        self.get_all_files_in_directory(folder_path)
+
+        # i = 0
+        # 遍历所有文件
+        for file_name in self.file_names:
+            # i=i+1
+            # if(i>2):
+            #     break
+            # 构造完整的文件路径
+            file_path = os.path.join(folder_path,file_name)
+            print(file_path)
+
+            # 创建一个FiberOpticDataProcessor对象
+            processor = FiberOpticDataProcessor(file_path)
+
+            # 加载数据
+            processor.load_data()
+
+            # 对数据进行FFT变换
+            processor.fft_data()
+
+            # 构造输出文件路径
+            output_file_path = os.path.join(output_folder,f"fft_result_{file_name}")
+
+            # 保存数据
+            processor.save_data(output_file_path)
+
+    def append_tofile(self,file_path, new_data, delimiter=',', chunk_size=10000):
+        # 1. 打开文件，如果不存在则创建
+        with open(file_path, 'a' if os.path.exists(file_path) else 'w') as file:
+            # 2. 将新数据分块写入文件
+            for i in range(0, len(new_data), chunk_size):
+                chunk = new_data[i:i + chunk_size]
+                np.savetxt(file, chunk, delimiter=delimiter)
+
 
 
 if __name__ == "__main__":
@@ -148,19 +198,25 @@ if __name__ == "__main__":
     # 读取的文件路径
     file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\2023_11_05-15_35_48--271332.csv"
     # 保存的文件路径
-    output_file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\my_output_file.csv"
+    output_file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\my_output_file1.csv"
 
     # # 创建一个FiberOpticDataProcessor对象
     processor = FiberOpticDataProcessor(file_path)
     # # 加载数据
-    # processor.load_data()
+    processor.load_data()
     # # 对数据进行FFT变换
-    # processor.fft_data()
+    processor.fft_data()
     # # 保存数据
-    # processor.save_data(output_file_path)
+    processor.save_data(output_file_path)
     # # 画图
-    # processor.plot_data(100,110)
+    processor.plot_data(100,110)
 
-    directory_path = "D:\\永安变电站\\20231103铁岭永安变.part01\\20231103铁岭永安变\\永安变测试数据_20231112\\振动设备\\anpu2x10"
-    processor.get_all_files_in_directory(directory_path)
+    # 测试get_all_files_in_directory函数
+    # directory_path = "D:\\永安变电站\\20231103铁岭永安变.part01\\20231103铁岭永安变\\永安变测试数据_20231112\\振动设备\\anpu2x10"
+    # processor.get_all_files_in_directory(directory_path)
 
+    # 测试process_folder函数
+    # folder_path = "D:\\永安变电站\\20231103铁岭永安变.part01\\20231103铁岭永安变\\永安变测试数据_20231112\\振动设备\\anpu2x10"
+    # output_folder = "C:\\Users\\liu-i\\Desktop\\FFT\\data"
+    # processor_none = FiberOpticDataProcessor(None)
+    # processor_none.process_folder(folder_path,output_folder)
