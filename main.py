@@ -117,7 +117,7 @@ class FiberOpticDataProcessor:
         """
         print("saving to file")
         # 将fft_result_db保存到CSV文件
-        np.savetxt(output_file_path, np.transpose(self.freq_axis), delimiter=',')
+        # np.savetxt(output_file_path, np.transpose(self.freq_axis), delimiter=',')
         # self.append_tofile(output_file_path, self.freq_axis, delimiter=',', chunk_size=10000)
         self.append_tofile(output_file_path, self.fft_result_db, delimiter=',', chunk_size=10000)
         print("saved")
@@ -215,23 +215,42 @@ class FiberOpticDataProcessor:
         获取特定频率范围内的最大频率值以及其对应的强度
         :param start_freq: 起始频率
         :param end_freq: 结束频率
-        :return: max_frequency, max_intensity
+        :return: max_frequencies, max_intensities
         """
         # 获取起始频率和结束频率的索引
-        # start_index =
+        # 获取起始频率并向下取整
+        start_index = int(np.floor(start_freq / self.freq_axis_step))
+        # 获取结束频率并向上取整
+        end_index = int(np.ceil(end_freq / self.freq_axis_step))
+        print(f'start_index: {start_index}')
+        print(f'end_index: {end_index}')
+
+        # 在指定范围内找到最大强度及其索引
+        # max_intensities: 每一列中最大强度的值
+        max_intensities_index = np.argmax(self.fft_result_db[start_index:end_index+1,:], axis=0)
+        # print(f'max_intensities_index: {max_intensities_index}')
+
+        max_intensities = self.fft_result_db[start_index:end_index+1,:][max_intensities_index, np.arange(self.num_cols)]
+        # print(f'max_intensities: {max_intensities}')
+
+        # 获取最大强度对应的频率
+        # 频率索引要添加一个偏移量
+        max_frequencies = self.freq_axis[max_intensities_index+start_index]
+        return max_frequencies, max_intensities
+        # print(f'max_frequencies: {max_frequencies}')
 
 if __name__ == "__main__":
 
     # 读取的文件路径
     file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\2023_11_05-15_35_48--271332.csv"
     # 保存的文件路径
-    output_file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\my_output_file1.csv"
+    output_file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\my_output.csv"
 
     # 10240 / 271.332
     # 频率轴的计算方法
     # print(1 / ((10240)*(271.332 / 10240)))
-    for i in range(10):
-        print(i / ((10240)*(271.332 / 10240)))
+    # for i in range(10):
+        # print(i / ((10240)*(271.332 / 10240)))
 
     # # 创建一个FiberOpticDataProcessor对象
     processor = FiberOpticDataProcessor(file_path)
@@ -240,16 +259,18 @@ if __name__ == "__main__":
     # # 对数据进行FFT变换
     processor.fft_data()
     # # 保存数据
-    # processor.save_data(output_file_path)
+    processor.save_data(output_file_path)
     # # 画图
-    # processor.plot_data(100,110)
+    processor.plot_data(100,110)
 
-    start_freq = 0.0184276089808795
-    end_freq = 0.0626538705349903
-    max_frequency, max_intensity = processor.get_max_frequency_range_intensity(start_freq, end_freq)
-
-    print(f"max_frequency: {max_frequency}")
-    print(f"max_intensity: {max_intensity}")
+    start_freq = 0.1
+    end_freq = 0.4
+    # processor.get_max_frequency_range_intensity(start_freq, end_freq)
+    max_frequencies, max_intensities = processor.get_max_frequency_range_intensity(start_freq, end_freq)
+    print(f"max_frequencies: {max_frequencies}")
+    print(f"max_intensities: {max_intensities}")
+    # print(f"max_frequency: {max_frequency}")
+    # print(f"max_intensity: {max_intensity}")
 
     # 测试get_all_files_in_directory函数
     # directory_path = "D:\\永安变电站\\20231103铁岭永安变.part01\\20231103铁岭永安变\\永安变测试数据_20231112\\振动设备\\anpu2x10"
