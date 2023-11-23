@@ -26,8 +26,6 @@ class FiberOpticDataProcessor:
         # self.fs = 10240 / 600
         self.fs = 0
         self.time_ms = 0
-
-
         # 频率轴
         self.freq_axis = None
         # 频率轴的公差
@@ -47,8 +45,7 @@ class FiberOpticDataProcessor:
         self.max_frequencies = None
         # 最大强度
         self.max_intensities = None
-        # 处理后的数据 暂时未用到
-        # self.processed_data = pd.DataFrame(columns=['Length', 'Max_Frequency', 'Max_Gain'])
+        # 处理后的数据
         self.processed_data = None
 
         # self.load_data()
@@ -88,9 +85,6 @@ class FiberOpticDataProcessor:
         # 获取频率轴
         freq_axis = np.fft.fftfreq(len(signal), 1 / self.fs).reshape(-1, 1)
 
-        # freq_axis 转置
-        # freq_axis = freq_axis.reshape(-1, 1)
-        # self.freq_axis = np.transpose(freq_axis[0:len(signal) // 2])
         self.freq_axis = freq_axis[0:len(signal) // 2]
         # print(self.freq_axis)
         # self.freq_axis = np.transpose(self.freq_axis)
@@ -231,16 +225,9 @@ class FiberOpticDataProcessor:
         # 获取文件夹中的所有文件
         self.get_all_files_in_directory(folder_path)
 
-        # i = 0
         # 遍历所有文件
         # for 添加tqdm
         for file_name in tqdm(self.file_names,desc="Processing",unit="files"):
-
-
-        # for file_name in self.file_names:
-            # i=i+1
-            # if(i>2):
-            #     break
             # 构造完整的文件路径
             file_path = os.path.join(folder_path,file_name)
             # print(file_path)
