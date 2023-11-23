@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import os
 import csv
+import re
 
 class FiberOpticDataProcessor:
 
@@ -23,7 +24,10 @@ class FiberOpticDataProcessor:
         self.num_cols = 0
         # 采样率
         # self.fs = 10240 / 600
-        self.fs = 10240 / 271.332
+        self.fs = 0
+        self.time_ms = 0
+
+
         # 频率轴
         self.freq_axis = None
         # 频率轴的公差
@@ -35,7 +39,7 @@ class FiberOpticDataProcessor:
         # 文件夹中所有文件的名称list
         self.file_names = []
         # max_intensities_index, max_frequencies, max_intensities
-        #
+        # 光缆长度
         self.fiber_optic_cable_length = None
         # 最大强度对应的索引
         self.max_intensities_index = None
@@ -47,6 +51,10 @@ class FiberOpticDataProcessor:
         # self.processed_data = pd.DataFrame(columns=['Length', 'Max_Frequency', 'Max_Gain'])
         self.processed_data = None
 
+        # self.load_data()
+
+
+
     def load_data(self):
         """
         加载数据，其中计算了频率轴以及重置了fft_result、fft_result_db的size
@@ -55,8 +63,11 @@ class FiberOpticDataProcessor:
         self.data = pd.read_csv(self.file_path, header=None)
         # 获取数据的行数和列数
         self.num_rows, self.num_cols = self.data.shape
-        print(f'Number of rows: {self.num_rows}')
-        print(f'Number of columns: {self.num_cols}')
+
+        self.load_time_ms()
+
+        # print(f'Number of rows: {self.num_rows}')
+        # print(f'Number of columns: {self.num_cols}')
         # 取data的第一列
         signal = self.data.iloc[:, 0].values
 
@@ -66,8 +77,13 @@ class FiberOpticDataProcessor:
         # 打印num_rows，并提示
         # print(f'Number of rows: {self.num_rows}')
 
+        self.fs = self.num_rows / (self.time_ms/1000)
+        # print(f'fs: {self.fs}')
+        # print(self.fs)
+        # print(10240 / 271.332)
+
         self.freq_axis_step = 1 / ((self.num_rows) * (1/ self.fs))
-        print(f'freq_axis_step: {self.freq_axis_step}')
+        # print(f'freq_axis_step: {self.freq_axis_step}')
 
         # 获取频率轴
         freq_axis = np.fft.fftfreq(len(signal), 1 / self.fs).reshape(-1, 1)
@@ -84,6 +100,7 @@ class FiberOpticDataProcessor:
         # 打印频率轴freq_axis
         # print(self.freq_axis.shape[0])
         self.fft_result = np.zeros((self.freq_axis.shape[0], self.num_cols))
+        # print(self.fft_result)
         self.fft_result_db = np.zeros((self.freq_axis.shape[0],self.num_cols))
         self.processed_data = np.zeros((self.num_cols, 3))
         self.max_intensities_index = np.zeros((self.num_cols, 1))
@@ -97,8 +114,8 @@ class FiberOpticDataProcessor:
         if self.data is None:
             print("数据加载失败")
         else:
-            print("数据加载成功")
-
+            # print("数据加载成功")
+            pass
     def fft_data(self):
         """
         对数据进行FFT变换
@@ -126,13 +143,15 @@ class FiberOpticDataProcessor:
             # 将新计算的值更新到矩阵中
             self.fft_result[:, col] = fft_result
             self.fft_result_db[:, col] = magnitude_db
+        # print(self.fft_result)
 
     def save_data(self,output_file_path):
         """
         将fft_result_db保存到CSV文件
         :param output_file_path: 保存的文件路径
         """
-        print("saving to file")
+        # print("saving to file")
+        # print(self.processed_data)
 
         # 写入CSV文件
         with open(output_file_path, 'w', newline='') as csvfile:
@@ -144,7 +163,7 @@ class FiberOpticDataProcessor:
             # 写入数据
             csv_writer.writerows(self.processed_data)
 
-        print("saved")
+        # print("saved")
 
 
 
@@ -181,10 +200,29 @@ class FiberOpticDataProcessor:
         self.file_names = files
 
         # 打印文件名
-        for file in files:
-            print(file)
+        # for file in files:
+        #     print(file)
 
-    def process_folder(self,folder_path,output_folder):
+    def load_time_ms(self):
+        # print(self.file_path)
+        # 使用正则表达式提取数字部分
+        match = re.search(r'--(\d+)', self.file_path)
+
+        if match:
+            # 提取的数字部分
+            extracted_number = match.group(1)
+
+            # 将提取的数字部分转换为整数
+            extracted_number_as_int = int(extracted_number)
+            self.time_ms = extracted_number_as_int
+
+            # 打印结果
+            # print("提取的数字部分:", self.time_ms)
+        else:
+            print("未找到匹配的数字部分")
+
+
+    def process_folder(self,folder_path,output_folder,start_freq,end_freq):
         """
         处理文件夹中的所有文件
         :param folder_path: 文件夹路径
@@ -195,13 +233,17 @@ class FiberOpticDataProcessor:
 
         # i = 0
         # 遍历所有文件
-        for file_name in self.file_names:
+        # for 添加tqdm
+        for file_name in tqdm(self.file_names,desc="Processing",unit="files"):
+
+
+        # for file_name in self.file_names:
             # i=i+1
             # if(i>2):
             #     break
             # 构造完整的文件路径
             file_path = os.path.join(folder_path,file_name)
-            print(file_path)
+            # print(file_path)
 
             # 创建一个FiberOpticDataProcessor对象
             processor = FiberOpticDataProcessor(file_path)
@@ -214,6 +256,9 @@ class FiberOpticDataProcessor:
 
             # 构造输出文件路径
             output_file_path = os.path.join(output_folder,f"fft_result_{file_name}")
+
+            # 获取区间最大值
+            processor.get_max_frequency_range_intensity(start_freq, end_freq)
 
             # 保存数据
             processor.save_data(output_file_path)
@@ -246,8 +291,8 @@ class FiberOpticDataProcessor:
         start_index = int(np.floor(start_freq / self.freq_axis_step))
         # 获取结束频率并向上取整
         end_index = int(np.ceil(end_freq / self.freq_axis_step))
-        print(f'start_index: {start_index}')
-        print(f'end_index: {end_index}')
+        # print(f'start_index: {start_index}')
+        # print(f'end_index: {end_index}')
 
         # 在指定范围内找到最大强度及其索引
         # max_intensities: 每一列中最大强度的值
@@ -271,46 +316,45 @@ class FiberOpticDataProcessor:
 
 
 if __name__ == "__main__":
+    select_mode = 0
+    if select_mode == 0:
+        # 测试单个文件
+        # 这里整理一下类的使用方法
+        # 1. 读取的文件路径
+        file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\2023_11_05-15_35_48--271332.csv"
+        # 2. 保存的文件路径
+        output_file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\test.csv"
+        # 3. 定义频率范围
+        start_freq = 0.1
+        end_freq = 0.4
+        # 4. 创建一个FiberOpticDataProcessor对象
+        processor = FiberOpticDataProcessor(file_path)
+        # 5. 加载数据
+        processor.load_data()
+        # 6. 对数据进行FFT变换
+        processor.fft_data()
+        # 7. 获取区间最大值
+        processor.get_max_frequency_range_intensity(start_freq,end_freq)
+        # 8. 保存数据
+        processor.save_data(output_file_path)
+        # 8. 画图
+        # processor.plot_data(100,110)
+    elif select_mode == 1:
+        # 测试文件夹
+        # 1. 定义文件夹路径
+        folder_path = "D:\\永安变电站\\20231103铁岭永安变.part01\\20231103铁岭永安变\\永安变测试数据_20231112\\振动设备\\anpu2x10"
+        # 2. 定义输出文件夹路径
+        output_folder = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\test"
+        # 3. 定义频率范围
+        start_freq = 0.1
+        end_freq = 0.4
+        # 4. 创建一个FiberOpticDataProcessor对象
+        processor = FiberOpticDataProcessor(None)
+        # 5. 处理文件夹中的所有文件
+        processor.process_folder(folder_path,output_folder,start_freq,end_freq)
 
-    # 读取的文件路径
-    file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\2023_11_05-15_35_48--271332.csv"
-    # 保存的文件路径
-    output_file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\test.csv"
-
-    # 10240 / 271.332
-    # 频率轴的计算方法
-    # print(1 / ((10240)*(271.332 / 10240)))
-    # for i in range(10):
-        # print(i / ((10240)*(271.332 / 10240)))
-
-    # # 创建一个FiberOpticDataProcessor对象
-    processor = FiberOpticDataProcessor(file_path)
-    # # 加载数据
-    processor.load_data()
-    # # 对数据进行FFT变换
-    processor.fft_data()
-
-    start_freq = 0.1
-    end_freq = 0.4
-    # processor.get_max_frequency_range_intensity(start_freq, end_freq)
-    processor.get_max_frequency_range_intensity(start_freq, end_freq)
-
-    # # 保存数据
-    processor.save_data(output_file_path)
-    # # 画图
-    processor.plot_data(100,110)
 
     # print(f"max_frequencies: {max_frequencies}")
     # print(f"max_intensities: {max_intensities}")
     # print(f"max_frequency: {max_frequency}")
     # print(f"max_intensity: {max_intensity}")
-
-    # 测试get_all_files_in_directory函数
-    # directory_path = "D:\\永安变电站\\20231103铁岭永安变.part01\\20231103铁岭永安变\\永安变测试数据_20231112\\振动设备\\anpu2x10"
-    # processor.get_all_files_in_directory(directory_path)
-
-    # 测试process_folder函数
-    # folder_path = "D:\\永安变电站\\20231103铁岭永安变.part01\\20231103铁岭永安变\\永安变测试数据_20231112\\振动设备\\anpu2x10"
-    # output_folder = "C:\\Users\\liu-i\\Desktop\\FFT\\data"
-    # processor_none = FiberOpticDataProcessor(None)
-    # processor_none.process_folder(folder_path,output_folder)
