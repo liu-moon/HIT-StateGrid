@@ -4,6 +4,7 @@ from numpy.fft import fft
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import os
+import csv
 
 class FiberOpticDataProcessor:
 
@@ -33,8 +34,18 @@ class FiberOpticDataProcessor:
         self.fft_result_db = None
         # 文件夹中所有文件的名称list
         self.file_names = []
+        # max_intensities_index, max_frequencies, max_intensities
+        #
+        self.fiber_optic_cable_length = None
+        # 最大强度对应的索引
+        self.max_intensities_index = None
+        # 最大强度对应的频率
+        self.max_frequencies = None
+        # 最大强度
+        self.max_intensities = None
         # 处理后的数据 暂时未用到
-        self.processed_data = pd.DataFrame(columns=['Length', 'Max_Frequency', 'Max_Gain'])
+        # self.processed_data = pd.DataFrame(columns=['Length', 'Max_Frequency', 'Max_Gain'])
+        self.processed_data = None
 
     def load_data(self):
         """
@@ -74,6 +85,12 @@ class FiberOpticDataProcessor:
         # print(self.freq_axis.shape[0])
         self.fft_result = np.zeros((self.freq_axis.shape[0], self.num_cols))
         self.fft_result_db = np.zeros((self.freq_axis.shape[0],self.num_cols))
+        self.processed_data = np.zeros((self.num_cols, 3))
+        self.max_intensities_index = np.zeros((self.num_cols, 1))
+        self.max_frequencies = np.zeros((self.num_cols, 1))
+        self.max_intensities = np.zeros((self.num_cols, 1))
+        self.fiber_optic_cable_length = np.arange(0, 0 + 20 * self.num_cols, 20).reshape(-1, 1)
+        # print(self.fiber_optic_cable_length.shape)
         # print(self.fft_result.shape)
         # print(self.fft_result_db.shape)
 
@@ -116,10 +133,17 @@ class FiberOpticDataProcessor:
         :param output_file_path: 保存的文件路径
         """
         print("saving to file")
-        # 将fft_result_db保存到CSV文件
-        # np.savetxt(output_file_path, np.transpose(self.freq_axis), delimiter=',')
-        # self.append_tofile(output_file_path, self.freq_axis, delimiter=',', chunk_size=10000)
-        self.append_tofile(output_file_path, self.fft_result_db, delimiter=',', chunk_size=10000)
+
+        # 写入CSV文件
+        with open(output_file_path, 'w', newline='') as csvfile:
+            csv_writer = csv.writer(csvfile)
+
+            # 写入首行
+            csv_writer.writerow(['距离（米）', '频率（Hz）', '强度(dB)'])
+
+            # 写入数据
+            csv_writer.writerows(self.processed_data)
+
         print("saved")
 
 
@@ -215,7 +239,7 @@ class FiberOpticDataProcessor:
         获取特定频率范围内的最大频率值以及其对应的强度
         :param start_freq: 起始频率
         :param end_freq: 结束频率
-        :return: max_frequencies, max_intensities
+        :return: max_intensities_index, max_frequencies, max_intensities
         """
         # 获取起始频率和结束频率的索引
         # 获取起始频率并向下取整
@@ -236,15 +260,22 @@ class FiberOpticDataProcessor:
         # 获取最大强度对应的频率
         # 频率索引要添加一个偏移量
         max_frequencies = self.freq_axis[max_intensities_index+start_index]
-        return max_frequencies, max_intensities
-        # print(f'max_frequencies: {max_frequencies}')
+
+        # self.max_intensities_index = max_intensities_index.reshape(-1, 1)
+        self.max_frequencies = max_frequencies.reshape(-1, 1)
+        self.max_intensities = max_intensities.reshape(-1, 1)
+
+        self.processed_data[:, 0] = self.fiber_optic_cable_length.flatten()
+        self.processed_data[:, 1] = self.max_frequencies.flatten()
+        self.processed_data[:, 2] = self.max_intensities.flatten()
+
 
 if __name__ == "__main__":
 
     # 读取的文件路径
     file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\2023_11_05-15_35_48--271332.csv"
     # 保存的文件路径
-    output_file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\my_output.csv"
+    output_file_path = "C:\\Users\\liu-i\\Desktop\\FFT\\data\\test.csv"
 
     # 10240 / 271.332
     # 频率轴的计算方法
@@ -258,17 +289,19 @@ if __name__ == "__main__":
     processor.load_data()
     # # 对数据进行FFT变换
     processor.fft_data()
+
+    start_freq = 0.1
+    end_freq = 0.4
+    # processor.get_max_frequency_range_intensity(start_freq, end_freq)
+    processor.get_max_frequency_range_intensity(start_freq, end_freq)
+
     # # 保存数据
     processor.save_data(output_file_path)
     # # 画图
     processor.plot_data(100,110)
 
-    start_freq = 0.1
-    end_freq = 0.4
-    # processor.get_max_frequency_range_intensity(start_freq, end_freq)
-    max_frequencies, max_intensities = processor.get_max_frequency_range_intensity(start_freq, end_freq)
-    print(f"max_frequencies: {max_frequencies}")
-    print(f"max_intensities: {max_intensities}")
+    # print(f"max_frequencies: {max_frequencies}")
+    # print(f"max_intensities: {max_intensities}")
     # print(f"max_frequency: {max_frequency}")
     # print(f"max_intensity: {max_intensity}")
 
